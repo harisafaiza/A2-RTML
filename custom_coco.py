@@ -52,6 +52,15 @@ class CustomCoco(CocoDetection):
         self.coco = COCO(annFile)
         self.ids = list(sorted(self.coco.imgs.keys()))
 
+        # ✅ Keep only valid images
+        self.ids = [
+            img_id for img_id in sorted(self.coco.imgs.keys())
+            if os.path.exists(os.path.join(root, self.coco.loadImgs(img_id)[0]['file_name']))
+        ]
+
+        print(f"✅ Loaded {len(self.ids)} valid images, skipped {len(self.coco.imgs) - len(self.ids)} missing images.")
+
+
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
@@ -68,6 +77,10 @@ class CustomCoco(CocoDetection):
         # self.target = target
 
         path = coco.loadImgs(img_id)[0]['file_name']
+        # ✅ If image is missing, skip it instead of crashing
+        if not os.path.exists(path):
+            print(f"⚠️ Warning: Image {path} not found. Skipping...")
+            return self.__getitem__((index + 1) % len(self.ids))  # ✅ Load next image
 
         img = Image.open(os.path.join(self.root, path)).convert('RGB')
         img = np.array(img)
@@ -464,5 +477,3 @@ def calculate_APs(iou_threshold, batches, targets):
     # 80 classes
     # print(target)
     # for i in range(0, 80):
-
-            
